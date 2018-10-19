@@ -10,6 +10,8 @@ import (
 	"gopkg.in/alecthomas/kingpin.v2"
 	"io/ioutil"
 	"net/http"
+	"sort"
+	"strconv"
 )
 
 const (
@@ -25,24 +27,21 @@ var (
 type collector struct {
 	namespace string
 	config    map[string]config.Metric
-	desc      map[string][]*prometheus.Desc
+	desc      map[string]*prometheus.Desc
 }
 
 func newCollector(namespace string, metrics []config.Metric) (*collector, error) {
 	c := map[string]config.Metric{}
-	d := map[string][]*prometheus.Desc{}
+	d := map[string]*prometheus.Desc{}
 	for _, metric := range metrics {
 		var keys []string
 		for k := range metric.Labels {
 			keys = append(keys, k)
 		}
-		var descs []*prometheus.Desc
-		for i := 0; i < metric.Size; i++ {
-			descs = append(descs, prometheus.NewDesc(fmt.Sprintf("%s_%s_%d", namespace, metric.Name, i), "dummy", keys, nil))
-		}
-
+		sort.Strings(keys)
+		keys = append([]string{"id"}, keys...)
 		c[metric.Name] = metric
-		d[metric.Name] = descs
+		d[metric.Name] = prometheus.NewDesc(fmt.Sprintf("%s_%s", namespace, metric.Name), "dummy", keys, nil)
 	}
 	return &collector{
 		namespace: namespace,
@@ -52,17 +51,25 @@ func newCollector(namespace string, metrics []config.Metric) (*collector, error)
 }
 
 func (collector collector) Describe(ch chan<- *prometheus.Desc) {
-	for _, descs := range collector.desc {
-		for _, desc := range descs {
-			ch <- desc
-		}
+	for _, desc := range collector.desc {
+		ch <- desc
 	}
 }
 
 func (collector collector) Collect(ch chan<- prometheus.Metric) {
-	for _, descs := range collector.desc {
-		for _, desc := range descs {
-			ch <- prometheus.MustNewConstMetric(desc, prometheus.GaugeValue, 1)
+	for name, desc := range collector.desc {
+		var keys []string
+		for k := range collector.config[name].Labels {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		for i := 0; i < collector.config[name].Size; i++ {
+			labels := []string{strconv.Itoa(i)}
+			for _, key := range keys {
+				vals := collector.config[name].Labels[key]
+				labels = append(labels, vals[i%len(vals)])
+			}
+			ch <- prometheus.MustNewConstMetric(desc, prometheus.GaugeValue, 1, labels...)
 		}
 	}
 }
