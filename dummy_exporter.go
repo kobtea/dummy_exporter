@@ -9,8 +9,10 @@ import (
 	"github.com/prometheus/common/version"
 	"gopkg.in/alecthomas/kingpin.v2"
 	"io/ioutil"
+	"math/rand"
 	"net/http"
 	"strconv"
+	"time"
 )
 
 const (
@@ -28,6 +30,10 @@ type collector struct {
 	config    map[string]config.Metric
 	counters  map[string]*prometheus.CounterVec
 	gauges    map[string]*prometheus.GaugeVec
+}
+
+func init() {
+	rand.Seed(time.Now().UnixNano())
 }
 
 func newCollector(namespace string, metrics []config.Metric) (*collector, error) {
@@ -92,6 +98,25 @@ func (collector collector) Collect(ch chan<- prometheus.Metric) {
 	}
 }
 
+func (collector collector) Update() {
+	for name, conf := range collector.config {
+		for i := 0; i < conf.Size; i++ {
+			labels := map[string]string{"id": strconv.Itoa(i)}
+			for key, vals := range conf.Labels {
+				labels[key] = vals[i%len(vals)]
+			}
+			switch conf.Type {
+			case "counter":
+				collector.counters[name].With(labels).Inc()
+			case "gauge":
+				collector.gauges[name].With(labels).Set(rand.Float64())
+			default:
+				log.Errorf("invalid type: %s for %s", conf.Type, conf.Name)
+			}
+		}
+	}
+}
+
 func main() {
 	kingpin.Version(version.Print("dummy_exporter"))
 	kingpin.HelpFlag.Short('h')
@@ -111,6 +136,13 @@ func main() {
 		log.Fatal(err)
 	}
 	prometheus.MustRegister(collector)
+
+	go func() {
+		for {
+			collector.Update()
+			time.Sleep(time.Second * 5)
+		}
+	}()
 
 	http.Handle(*metricsPath, promhttp.Handler())
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
