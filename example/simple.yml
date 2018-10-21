@@ -1,6 +1,6 @@
 metrics:
 - name: foo
-  type: counter
+  type: gauge
   size: 5
 - name: bar
   type: counter

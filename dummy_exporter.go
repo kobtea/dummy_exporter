@@ -10,7 +10,6 @@ import (
 	"gopkg.in/alecthomas/kingpin.v2"
 	"io/ioutil"
 	"net/http"
-	"sort"
 	"strconv"
 )
 
@@ -27,49 +26,68 @@ var (
 type collector struct {
 	namespace string
 	config    map[string]config.Metric
-	desc      map[string]*prometheus.Desc
+	counters  map[string]*prometheus.CounterVec
+	gauges    map[string]*prometheus.GaugeVec
 }
 
 func newCollector(namespace string, metrics []config.Metric) (*collector, error) {
 	c := map[string]config.Metric{}
-	d := map[string]*prometheus.Desc{}
+	counters := map[string]*prometheus.CounterVec{}
+	gauges := map[string]*prometheus.GaugeVec{}
 	for _, metric := range metrics {
 		var keys []string
 		for k := range metric.Labels {
 			keys = append(keys, k)
 		}
-		sort.Strings(keys)
 		keys = append([]string{"id"}, keys...)
 		c[metric.Name] = metric
-		d[metric.Name] = prometheus.NewDesc(fmt.Sprintf("%s_%s", namespace, metric.Name), "dummy", keys, nil)
+		switch metric.Type {
+		case "counter":
+			counters[metric.Name] = prometheus.NewCounterVec(prometheus.CounterOpts{
+				Name: fmt.Sprintf("%s_%s", namespace, metric.Name),
+				Help: "dummy counter",
+			}, keys)
+		case "gauge":
+			gauges[metric.Name] = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+				Name: fmt.Sprintf("%s_%s", namespace, metric.Name),
+				Help: "dummy gauge",
+			}, keys)
+		default:
+			return nil, fmt.Errorf("invalid type: %s for %s", metric.Type, metric.Name)
+		}
 	}
 	return &collector{
 		namespace: namespace,
 		config:    c,
-		desc:      d,
+		counters:  counters,
+		gauges:    gauges,
 	}, nil
 }
 
 func (collector collector) Describe(ch chan<- *prometheus.Desc) {
-	for _, desc := range collector.desc {
-		ch <- desc
+	for _, metric := range collector.counters {
+		metric.Describe(ch)
+	}
+	for _, metric := range collector.gauges {
+		metric.Describe(ch)
 	}
 }
 
 func (collector collector) Collect(ch chan<- prometheus.Metric) {
-	for name, desc := range collector.desc {
-		var keys []string
-		for k := range collector.config[name].Labels {
-			keys = append(keys, k)
-		}
-		sort.Strings(keys)
-		for i := 0; i < collector.config[name].Size; i++ {
-			labels := []string{strconv.Itoa(i)}
-			for _, key := range keys {
-				vals := collector.config[name].Labels[key]
-				labels = append(labels, vals[i%len(vals)])
+	for name, conf := range collector.config {
+		for i := 0; i < conf.Size; i++ {
+			labels := map[string]string{"id": strconv.Itoa(i)}
+			for key, vals := range conf.Labels {
+				labels[key] = vals[i%len(vals)]
 			}
-			ch <- prometheus.MustNewConstMetric(desc, prometheus.GaugeValue, 1, labels...)
+			switch conf.Type {
+			case "counter":
+				collector.counters[name].With(labels).Collect(ch)
+			case "gauge":
+				collector.gauges[name].With(labels).Collect(ch)
+			default:
+				log.Errorf("invalid type: %s for %s", conf.Type, conf.Name)
+			}
 		}
 	}
 }
