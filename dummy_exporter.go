@@ -88,28 +88,11 @@ func (collector collector) Collect(ch chan<- prometheus.Metric) {
 			}
 			switch conf.Type {
 			case "counter":
+				collector.counters[name].With(labels).Inc()
 				collector.counters[name].With(labels).Collect(ch)
 			case "gauge":
-				collector.gauges[name].With(labels).Collect(ch)
-			default:
-				log.Errorf("invalid type: %s for %s", conf.Type, conf.Name)
-			}
-		}
-	}
-}
-
-func (collector collector) Update() {
-	for name, conf := range collector.config {
-		for i := 0; i < conf.Size; i++ {
-			labels := map[string]string{"id": strconv.Itoa(i)}
-			for key, vals := range conf.Labels {
-				labels[key] = vals[i%len(vals)]
-			}
-			switch conf.Type {
-			case "counter":
-				collector.counters[name].With(labels).Inc()
-			case "gauge":
 				collector.gauges[name].With(labels).Set(rand.Float64())
+				collector.gauges[name].With(labels).Collect(ch)
 			default:
 				log.Errorf("invalid type: %s for %s", conf.Type, conf.Name)
 			}
@@ -136,13 +119,6 @@ func main() {
 		log.Fatal(err)
 	}
 	prometheus.MustRegister(collector)
-
-	go func() {
-		for {
-			collector.Update()
-			time.Sleep(time.Second * 5)
-		}
-	}()
 
 	http.Handle(*metricsPath, promhttp.Handler())
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
