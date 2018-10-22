@@ -107,13 +107,16 @@ func main() {
 	kingpin.HelpFlag.Short('h')
 	kingpin.Parse()
 
-	buf, err := ioutil.ReadFile(*configFile)
-	if err != nil {
-		log.Fatal("failed to read config file")
-	}
-	conf, err := config.Parse(buf)
-	if err != nil {
-		log.Fatal("invalid config format")
+	conf := &config.Config{}
+	if *configFile != "" {
+		buf, err := ioutil.ReadFile(*configFile)
+		if err != nil {
+			log.Fatal("failed to read config file")
+		}
+		conf, err = config.Parse(buf)
+		if err != nil {
+			log.Fatal("invalid config format")
+		}
 	}
 
 	collector, err := newCollector(namespace, conf.Metrics)
