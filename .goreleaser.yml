@@ -1,0 +1,40 @@
+builds:
+- main: ./
+  flags: -a -tags netgo
+  ldflags: |
+    -s -w
+    -X github.com/kobtea/dummy_exporter/vendor/github.com/prometheus/common/version.Version={{.Version}}
+    -X github.com/kobtea/dummy_exporter/vendor/github.com/prometheus/common/version.Revision={{.Commit}}
+    -X github.com/kobtea/dummy_exporter/vendor/github.com/prometheus/common/version.Branch={{.Env.BUILD_BRANCH}}
+    -X github.com/kobtea/dummy_exporter/vendor/github.com/prometheus/common/version.BuildUser={{.Env.BUILD_USER}}@{{.Env.BUILD_HOST}}
+    -X github.com/kobtea/dummy_exporter/vendor/github.com/prometheus/common/version.BuildDate={{.Env.BUILD_DATE}}
+  env:
+    - CGO_ENABLED=0
+  goos:
+    - linux
+    - darwin
+  goarch:
+    - amd64
+archive:
+  replacements:
+    darwin: Darwin
+    linux: Linux
+    windows: Windows
+    386: i386
+    amd64: x86_64
+nfpm:
+  homepage: https://github.com/kobtea/dummy_exporter
+  maintainer: Hiroaki Kobayashi <kobtea9696@gmail.com>
+  description: Dummy exporter
+  license: MIT
+  formats:
+    - deb
+    - rpm
+changelog:
+  sort: asc
+  filters:
+    exclude:
+    - '^docs:'
+    - '^test:'
+    - '^cut:'
+    - '^typo'

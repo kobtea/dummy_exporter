@@ -1,0 +1,76 @@
+defaults: &defaults
+  docker:
+    - image: circleci/golang:1.11
+  working_directory: /go/src/github.com/kobtea/dummy_exporter
+
+version: 2
+jobs:
+  setup:
+    <<: *defaults
+    steps:
+      - checkout
+      - run: |
+          make setup
+      - persist_to_workspace:
+          root: .
+          paths: .
+  build:
+    <<: *defaults
+    steps:
+      - attach_workspace:
+          at: /go/src/github.com/kobtea/dummy_exporter
+      - run: |
+          make test
+          make build
+  tagging:
+    <<: *defaults
+    steps:
+      - add_ssh_keys:
+          fingerprints:
+            - 8d:d1:78:9b:26:2f:18:a2:21:0f:33:0b:c0:77:ad:39
+      - checkout
+      - run: |
+          make sync-tag
+  release:
+    <<: *defaults
+    steps:
+      - attach_workspace:
+          at: /go/src/github.com/kobtea/dummy_exporter
+      - setup_remote_docker
+      - run: |
+          sudo apt update
+          sudo apt install -y rpm
+          make release
+          make docker-release
+workflows:
+  version: 2
+  build_and_release:
+    jobs:
+      - setup:
+          filters:
+            tags:
+              only: /.*/
+            branches:
+              only: /.*/
+      - build:
+          requires:
+            - setup
+          filters:
+            tags:
+              only: /.*/
+            branches:
+              only: /.*/
+      - release:
+          requires:
+            - build
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              ignore: /.*/
+  tagging:
+    jobs:
+      - tagging:
+          filters:
+            branches:
+              only: master
