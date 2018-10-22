@@ -50,13 +50,15 @@ func newCollector(namespace string, metrics []config.Metric) (*collector, error)
 		switch metric.Type {
 		case "counter":
 			counters[metric.Name] = prometheus.NewCounterVec(prometheus.CounterOpts{
-				Name: fmt.Sprintf("%s_%s", namespace, metric.Name),
-				Help: "dummy counter",
+				Namespace: namespace,
+				Name:      metric.Name,
+				Help:      "dummy counter",
 			}, keys)
 		case "gauge":
 			gauges[metric.Name] = prometheus.NewGaugeVec(prometheus.GaugeOpts{
-				Name: fmt.Sprintf("%s_%s", namespace, metric.Name),
-				Help: "dummy gauge",
+				Namespace: namespace,
+				Name:      metric.Name,
+				Help:      "dummy gauge",
 			}, keys)
 		default:
 			return nil, fmt.Errorf("invalid type: %s for %s", metric.Type, metric.Name)
