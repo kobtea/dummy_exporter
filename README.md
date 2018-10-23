@@ -21,6 +21,14 @@ $ dep ensure
 $ make build
 ```
 
+### Docker container
+
+https://hub.docker.com/r/kobtea/dummy_exporter/
+
+```bash
+$ docker run -p 9999:9999 -v /PATH/TO/config.yml:/etc/dummy_exporter.yml kobtea/dummy_exporter
+```
+
 
 ## Usage
 
