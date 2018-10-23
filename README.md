@@ -26,7 +26,7 @@ $ make build
 https://hub.docker.com/r/kobtea/dummy_exporter/
 
 ```bash
-$ docker run -p 9999:9999 -v /PATH/TO/config.yml:/etc/dummy_exporter.yml kobtea/dummy_exporter
+$ docker run -p 9510:9510 -v /PATH/TO/config.yml:/etc/dummy_exporter.yml kobtea/dummy_exporter
 ```
 
 
@@ -38,7 +38,7 @@ usage: dummy_exporter [<flags>]
 
 Flags:
   -h, --help              Show context-sensitive help (also try --help-long and --help-man).
-      --web.listen-address=":9999"
+      --web.listen-address=":9510"
                           Address to listen on for web interface and telemetry
       --web.telemetry-path="/metrics"
                           Path under which to expose metrics.
@@ -80,7 +80,7 @@ metrics:
 ```
 
 ```
-$ curl -s localhost:9999/metrics | egrep dummy
+$ curl -s localhost:9510/metrics | egrep dummy
 # HELP dummy_bar dummy gauge
 # TYPE dummy_bar gauge
 dummy_bar{id="0",l1="one",l2="aaa"} 0.011785717417686026
