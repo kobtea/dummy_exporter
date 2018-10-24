@@ -1,5 +1,8 @@
 # dummy_exporter
 
+[![CircleCI](https://circleci.com/gh/kobtea/dummy_exporter.svg?style=svg)](https://circleci.com/gh/kobtea/dummy_exporter)
+[![Go Report Card](https://goreportcard.com/badge/github.com/kobtea/dummy_exporter)](https://goreportcard.com/report/github.com/kobtea/dummy_exporter)
+
 ## Overview
 
 `dummy_exporter` exports meaningless metrics for [Prometheus](https://prometheus.io/).
