@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: dummy-exporter
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: dummy-exporter
+  name: dummy-exporter
+  namespace: dummy-exporter
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dummy-exporter
+  template:
+    metadata:
+      labels:
+        app: dummy-exporter
+    spec:
+      containers:
+      - image: kobtea/dummy_exporter:latest
+        imagePullPolicy: Always
+        name: dummy-exporter
